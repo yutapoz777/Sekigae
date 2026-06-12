@@ -371,21 +371,129 @@
         if (finalResult.length === 0) return alert("まだ席替えしていません。");
         const rows = parseInt(document.getElementById('rows').value) || 1;
         const cols = parseInt(document.getElementById('cols').value) || 1;
-        let table = "<table border='1' style='border-collapse:collapse;width:100%;text-align:center;'>";
+        
+        const dataArray = [];
+        let tableContent = "";
         for (let r = 0; r < rows; r++) {
-            table += "<tr>";
+            tableContent += "<tr>";
             for (let c = 0; c < cols; c++) {
                 const id = r * cols + c;
                 const seat = seats.find(s => s.id === id);
                 const res = finalResult.find(x => x.id === id);
                 const isHidden = seat && !seat.active;
-                table += `<td style="padding:15px; ${isHidden ? 'background:#eee;' : ''}">${(res && !isHidden) ? res.name : ""}</td>`;
+                const name = (res && !isHidden) ? res.name : "";
+                
+                tableContent += `<td style="padding:15px; ${isHidden ? 'background:#eee;' : ''}">${name}</td>`;
+                
+                dataArray.push({
+                    r: r,
+                    c: c,
+                    name: name,
+                    active: seat ? seat.active : true
+                });
             }
-            table += "</tr>";
+            tableContent += "</tr>";
         }
-        table += "</table>";
+
         const win = window.open("", "_blank");
-        win.document.write(`<html><head><title>席替えピーヤ - 結果</title></head><body><h2 style="text-align:center;">席替え結果</h2>${table}</body></html>`);
+        win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>席替えピーヤ - 結果</title>
+    <style>
+        body { font-family: "Helvetica Neue", Arial, sans-serif; padding: 20px; text-align: center; background-color: #f8f9fa; color: #333; }
+        h2 { color: #4a90e2; margin-bottom: 20px; }
+        .btn-container { margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
+        button { padding: 10px 20px; font-size: 0.95rem; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; transition: background 0.2s, transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-download { background: #27ae60; color: white; }
+        .btn-download:hover { background: #219150; }
+        .btn-close { background: #7f8c8d; color: white; }
+        .btn-close:hover { background: #6c7a7d; }
+        .table-wrapper { display: inline-block; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        table { border-collapse: collapse; margin: 0 auto; }
+        td { border: 1px solid #ddd; padding: 15px; font-weight: bold; width: 120px; height: 45px; text-align: center; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <h2>席替え結果 (席替えピーヤ)</h2>
+    <div class="btn-container">
+        <button class="btn-download" onclick="downloadImage()">画像で保存 (PNG)</button>
+        <button class="btn-close" onclick="window.close()">閉じる</button>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>${tableContent}</table>
+    </div>
+
+    <script>
+        const rows = ${rows};
+        const cols = ${cols};
+        const data = ${JSON.stringify(dataArray)};
+
+        function downloadImage() {
+            const cellWidth = 140;
+            const cellHeight = 60;
+            const headerHeight = 80;
+            const padding = 20;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = cols * cellWidth + padding * 2;
+            canvas.height = rows * cellHeight + headerHeight + padding * 2;
+            const ctx = canvas.getContext('2d');
+
+            // 背景塗りつぶし (白)
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // タイトル描画
+            ctx.fillStyle = "#4a90e2";
+            ctx.font = "bold 24px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("席替え結果 (席替えピーヤ)", canvas.width / 2, padding + 30);
+
+            // 各セルの描画
+            ctx.font = "bold 16px sans-serif";
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = padding + c * cellWidth;
+                    const y = padding + headerHeight + r * cellHeight;
+                    const cellData = data.find(d => d.r === r && d.c === c);
+
+                    if (cellData) {
+                        if (!cellData.active) {
+                            // 無効席 (グレーアウト)
+                            ctx.fillStyle = "#eeeeee";
+                            ctx.fillRect(x, y, cellWidth, cellHeight);
+                        } else {
+                            // 有効席 (白地 + 黒文字)
+                            ctx.fillStyle = "#ffffff";
+                            ctx.fillRect(x, y, cellWidth, cellHeight);
+                            ctx.fillStyle = "#333333";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.fillText(cellData.name || "", x + cellWidth / 2, y + cellHeight / 2);
+                        }
+                    }
+
+                    // 罫線 (細いライトグレー)
+                    ctx.strokeStyle = "#cccccc";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellWidth, cellHeight);
+                }
+            }
+
+            // 画像の書き出し & ダウンロード
+            const link = document.createElement('a');
+            link.download = 'sekigae-result.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    <\/script>
+</body>
+</html>`);
     }
 </script>
 </body>
